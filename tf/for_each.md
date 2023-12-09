@@ -46,8 +46,8 @@ variable "ecr_repositories" {
 Hàm khai báo biến, tfvar
 ```
 ecr_repositories = [
-    "ipa-cn-dev/ipa-admin-backend",
-    "ipa-cn-dev/ipa-admin-frontend"
+    "ipa/admin-backend",
+    "ipa/admin-frontend"
 ]
 variable "ecr_repositories" {
   type = list(string)
