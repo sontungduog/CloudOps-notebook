@@ -1,0 +1,1 @@
+- grep and count: grep -c
