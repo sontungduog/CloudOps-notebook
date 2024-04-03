@@ -11,11 +11,9 @@
     cm - ConfigMap
     deploy - deployments
     ds - daemonset
-```
-
 5. k delete pod <PODNAME> --grace-period=0 --force --namespace <NAMESPACE>
 6. WATCH k get all -n helmdb <- check tat ca resource
-
+```
 Dynamic Volume Provisioning: tao pvc -> tu dong tao pv
 
 - DaemonSet: ensures that the pod runs on all the nodes of the cluster
