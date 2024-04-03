@@ -1,7 +1,7 @@
-k diff -f /tmp/update
-
-k scale deploy ipa-backend -n ipa-dev --replica=3
-
+```
+- k diff -f /tmp/update
+- k scale deploy ipa-backend -n ipa-dev --replica=3
+```
 k logs -f -l app=ipa-webshell -n ipa-dev
 
 
