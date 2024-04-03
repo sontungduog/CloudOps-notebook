@@ -1,12 +1,17 @@
 ```
-- k diff -f /tmp/update
-- k scale deploy ipa-backend -n ipa-dev --replica=3
+1. k diff -f /tmp/update
+2. k scale deploy ipa-backend -n ipa-dev --replica=3
+3. k logs -f -l app=ipa-webshell -n ipa-dev
+4. k get
+    po - pod
+    nodes
+    sc - StorageClass
+    pvc
+    svc - service
+    cm - ConfigMap
+    deploy - deployments
+    ds - daemonset
 ```
-k logs -f -l app=ipa-webshell -n ipa-dev
-
-
-```
-kubectl get po/nodes/sc (StorageClass)/pvc/svc (service)/ConfigMap/deployments
 
 kubectl delete pod <PODNAME> --grace-period=0 --force --namespace <NAMESPACE>
 WATCH k get all -n helmdb <- check tat ca resource
