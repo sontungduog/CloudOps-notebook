@@ -1,4 +1,4 @@
-'''
+"""
 #backup windows
 echo on 
 SET input=C:\xampp\
@@ -27,8 +27,7 @@ timeout /t 4000 /nobreak
 
 rem #Remove file
 del /s /q %output%*
-'''
-
+"""
 '''
 #check service processs
 delete service windows #SC: Service Control
