@@ -1,4 +1,4 @@
-"""
+```
 #backup windows
 echo on 
 SET input=C:\xampp\
@@ -27,8 +27,9 @@ timeout /t 4000 /nobreak
 
 rem #Remove file
 del /s /q %output%*
-"""
-'''
+```
+
+```
 #check service processs
 delete service windows #SC: Service Control
 
@@ -47,13 +48,13 @@ taskkill /F /PID 892
 netstat -na | findstr "LISTENING" netstat -nao
 
 change directory path: cd d/ D:
-'''
+```
 
-'''
+```
 #check_port_mapping
 echo on
 rem SET tool=E:\plink.exe
 E:\plink.exe -ssh 107.113.*.* -P 2022 -l scloud -pw opsOpenstack@$#2019 "sudo iptables -t nat -L -v -n --line-numbers | grep 172.17.0.190"
 
 timeout /t 4000 /nobreak
-'''
+```
