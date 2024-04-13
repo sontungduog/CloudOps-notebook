@@ -1,0 +1,837 @@
+podTemplate(inheritFrom: 'assume-role', serviceAccount: "jenkins-agent-tc-web-sa", label: "web") {
+node("web") {
+    container('opsbox') {
+    properties([
+        parameters([
+            [$class: 'DynamicReferenceParameter',
+                name: 'Step1',
+                choiceType: 'ET_FORMATTED_HTML',
+                description: null,
+                script: [
+                    $class: 'GroovyScript',
+                    fallbackScript: [
+                        classpath: [],
+                        sandbox: true,
+                        script: 'return ["Error when render value for Action."]'
+                    ],
+                    script: [
+                        classpath: [],
+                        sandbox: true,
+                        script: """
+                            return '''<p>
+                                <b>Choose the Action:</b><br>
+                                <select style="width: 20rem" name="value" class="jenkins-input">
+                                <option value="None" selected="selected">---Select---</option>
+                                <option value="UpdateEKSCluster">1. Update EKS cluster - Control plane</option>
+                                <option value="CheckEKSCluster">2. Check EKS cluster - Version, Node, Addons</option>
+                                <option value="UpdateEKSAddon">2a. (Optional) Update EKS addons - AWS Managed</option>
+                                <option value="DisableClusterAutoscaler">2b. (Optional) Disable Cluster Autoscaler</option>
+                                <option value="UpdateEKSNodeGroup">3. Update EKS node group - Infra or Tools node</option>
+                                <option value="CreateEKSNodeGroup">4. Create EKS node group - new Workload node</option>
+                                <option value="TaintsNodeGroup">5. Taint EKS node group - old Workload node</option>
+                                <option value="DeregistersTargets">6. Move pod from old workload -> new workload</option>
+                                <option value="ScaleAndUpdateNodeGroup">7. Scale in/out and update EKS node group - old Workload node</option>
+                                <option value="TaintNewNodeAndUntaintOldNode">8. Taint new workload node && untainted old workload node</option>
+                                <option value="DeregistersTargets">9. Move pod from new workload -> old workload</option>
+                                <option value="DeleteNewWorkloadNode">10. Delete new workload node</option>
+                                <option value="EnableClusterAutoscaler">10a. (Optional). Enable Cluster Autoscaler</option>
+                                </select>
+                            </p>'''
+                        """
+                    ]
+                ]
+            ],
+            [$class: 'DynamicReferenceParameter',
+                name: 'Step2',
+                referencedParameters: 'Step1',
+                choiceType: 'ET_FORMATTED_HTML',
+                description: null,
+                script: [
+                    $class: 'GroovyScript',
+                    fallbackScript: [
+                        classpath: [],
+                        sandbox: true,
+                        script: 'return ["Error when render value for Detail."]'
+                    ],
+                    script: [
+                        classpath: [],
+                        sandbox: true,
+                        script: """
+                            if(Step1 == 'UpdateEKSCluster')
+                            {
+                                return '''
+                                     <p><b>clusterName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Cluster Name"></p>
+                                     <p><b>clusterVersion:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Cluster Version"></p>
+                                     <p><b>regionCode:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="ap-southeast-1" placeholder="Region Code"></p>
+                                '''
+                            }
+                            else if(Step1 == 'CheckEKSCluster')
+                            {
+                                return '''
+                                     <p><b>clusterName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Cluster Name"></p>
+                                     <p><b>regionCode:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="ap-southeast-1" placeholder="Region Code"></p>
+                                '''
+                            }
+                            else if(Step1 == 'UpdateEKSNodeGroup')
+                            {
+                                return '''
+                                     <p><b>clusterName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Cluster Name"></p>
+                                     <p><b>nodeGroupName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Node Group Name"></p>
+                                     <p><b>clusterVersion:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Cluster Version"></p>
+                                     <p><b>regionCode:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="ap-southeast-1" placeholder="Region Code"></p>
+                                '''
+                            }
+                            else if(Step1 == 'DisableClusterAutoscaler')
+                            {
+                                return '''
+                                     <p><b>clusterName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Cluster Name"></p>
+                                     <p><b>regionCode:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="ap-southeast-1" placeholder="Region Code"></p>
+                                '''
+                            }
+                            else if(Step1 == 'EnableClusterAutoscaler')
+                            {
+                                return '''
+                                     <p><b>clusterName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Cluster Name"></p>
+                                     <p><b>regionCode:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="ap-southeast-1" placeholder="Region Code"></p>
+                                '''
+                            }  
+                            else if(Step1 == 'CreateEKSNodeGroup')
+                            {
+                                return '''
+                                    <p><b>clusterName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Cluster Name"></p>
+                                    <p><b>nodeGroupName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Node Group Name"></p>
+                                    <p><b>oldWorkerNodeGroupName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Old Worker Node Group Name"></p>                                                       
+                                     <p><b>regionCode:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="ap-southeast-1" placeholder="Region Code"></p>
+                                '''
+                            }
+                            else if(Step1 == 'TaintsNodeGroup')
+                            {
+                                return '''
+                                     <p><b>clusterName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Cluster Name"></p>
+                                     <p><b>nodeGroupName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Node Group Name"></p>
+                                     <p><b>regionCode:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="ap-southeast-1" placeholder="Region Code"></p>
+                                '''
+                            }
+                            else if(Step1 == 'RemoveTaintsNodeGroup')
+                            {
+                                return '''
+                                     <p><b>clusterName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Cluster Name"></p>
+                                     <p><b>nodeGroupName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Node Group Name"></p>
+                                     <p><b>regionCode:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="ap-southeast-1" placeholder="Region Code"></p>
+                                '''
+                            }    
+                            else if(Step1 == 'ScaleAndUpdateNodeGroup')
+                            {
+                                return '''
+                                     <p><b>clusterName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Cluster Name"></p>
+                                     <p><b>nodeGroupName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Node Group Name"></p>
+                                     <p><b>clusterVersion:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Cluster Version"></p>                                     
+                                     <p><b>regionCode:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="ap-southeast-1" placeholder="Region Code"></p>
+                                '''
+                            }
+                            else if(Step1 == 'UpdateEKSAddon')
+                            {
+                                return '''
+                                     <p><b>clusterName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Cluster Name"></p>
+                                     <p><b>regionCode:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="ap-southeast-1" placeholder="Region Code"></p>
+                                     <p><b>Add-on name:Add-on version</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Add-on name:version"></p>
+                                     <p><b>Service Account Role Arn (for aws-ebs-csi-driver):</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Service Account role arn"></p>
+                                '''
+                            }
+                            else if(Step1 == 'DeregistersTargets')
+                            {
+                                return '''
+                                     <p><b>clusterName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Cluster Name"></p>
+                                     <p><b>regionCode:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="ap-southeast-1" placeholder="Region Code"></p>
+                                     <p><b>targetGroupArns:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Target group ARNs"></p>
+                                     <p><b>Target group health status (healthy or unhealthy):</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="healthy or unhealthy"></p>
+                                     <p><b>Target group timeout:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="600" placeholder="Target group timeout"></p>
+                                '''
+                            }
+                            else if(Step1 == 'TaintNewNodeAndUntaintOldNode')
+                            {
+                                return '''
+                                     <p><b>clusterName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Cluster Name"></p>
+                                     <p><b>oldNodeGroupName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Old Node Group Name"></p>
+                                     <p><b>newNodeGroupName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="New Node Group Name"></p>                                     
+                                     <p><b>regionCode:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="ap-southeast-1" placeholder="Region Code"></p>
+                                '''
+                            }
+                            else if(Step1 == 'DeleteNewWorkloadNode')
+                            {
+                                return '''
+                                     <p><b>clusterName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="Cluster Name"></p>
+                                     <p><b>nodeGroupName:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="" placeholder="New Node Group Name"></p>
+                                     <p><b>regionCode:</b><br><input style="width:20rem" class="jenkins-input" type="text" name="value" value="ap-southeast-1" placeholder="Region Code"></p>
+                                '''
+                            }                    
+                            else {
+                                return '''
+                                    -----Ignone-----
+                                '''
+                            }
+                        """
+                    ]
+                ]
+            ]
+        ])
+    ])
+
+    // withAWS(roleAccount: '994681680541', role:'tc-dev-tcweb-jenkins-slave-cross-account-role') {
+    //     stage("Checkout SCM"){
+    //         cleanWs()
+    //         checkout scm
+    //     }
+    // }
+
+    echo "Params 1: ${params.Step1}"
+    echo "Params 2: ${params.Step2}"
+
+    List lstAction = params.Step1.tokenize(',')
+    def actionId = lstAction[0];
+    echo "Action: ${actionId}"
+
+    def accountId = '994681680541'
+    def iamRole = 'tc-dso-jenkins-role'
+
+    if (actionId == 'UpdateEKSCluster')
+    {
+        def step2_values = params.Step2.tokenize(',')
+        def clusterName = "${step2_values[0]}"
+        echo "ClusterName: ${clusterName}" 
+        def clusterVersion = "${step2_values[1]}"
+        echo "ClusterVersion: ${clusterVersion}"
+        def regionCode = "${step2_values[2]}"
+        echo "RegionCode: ${regionCode}"
+
+        if(clusterName != null && clusterName != '')
+        {
+            if(actionId == 'UpdateEKSCluster')
+            {
+                updateEKSCluster(accountId, iamRole, clusterName, clusterVersion, regionCode)
+            }
+        }
+    }
+    else if (actionId == 'CheckEKSCluster')
+    {
+        def step2_values = params.Step2.tokenize(',')
+        def clusterName = "${step2_values[0]}"
+        echo "ClusterName: ${clusterName}" 
+        def regionCode = "${step2_values[1]}"
+        echo "RegionCode: ${regionCode}"
+
+        checkEKSCluster(accountId, iamRole, clusterName, regionCode)
+    }
+    else if (actionId == 'UpdateEKSNodeGroup')
+    {
+        def step2_values = params.Step2.tokenize(',')
+        def clusterName = "${step2_values[0]}"
+        echo "ClusterName: ${clusterName}" 
+        def nodeGroupName = "${step2_values[1]}"
+        echo "NodeGroupName: ${nodeGroupName}"
+        def clusterVersion = "${step2_values[2]}"
+        echo "RegionCode: ${clusterVersion}"
+        def regionCode = "${step2_values[3]}"
+        echo "RegionCode: ${regionCode}"
+
+        updateNodeGroup(accountId, iamRole, clusterName, nodeGroupName, clusterVersion, regionCode)
+    }
+    else if (actionId == 'DisableClusterAutoscaler')
+    {
+        def step2_values = params.Step2.tokenize(',')
+        def clusterName  = "${step2_values[0]}"
+        def regionCode   = "${step2_values[1]}"
+        
+        disableClusterAutoscaler(accountId, iamRole, clusterName, regionCode)
+    }
+    else if (actionId == 'EnableClusterAutoscaler')
+    {
+        def step2_values = params.Step2.tokenize(',')
+        def clusterName  = "${step2_values[0]}"
+        def regionCode   = "${step2_values[1]}"
+        
+        enableClusterAutoscaler(accountId, iamRole, clusterName, regionCode)
+    } 
+    else if (actionId == 'CreateEKSNodeGroup')
+    {
+        def step2_values = params.Step2.tokenize(',')
+        def clusterName = "${step2_values[0]}"
+        echo "ClusterName: ${clusterName}" 
+        def nodeGroupName = "${step2_values[1]}"
+        echo "NodeGroupName: ${nodeGroupName}"
+        def oldWokerNodeGroupName  = "${step2_values[2]}"
+        echo "Old WorkerNodeGroupName: ${oldWokerNodeGroupName}"
+        def regionCode = "${step2_values[3]}"
+        echo "RegionCode: ${regionCode}"
+        createNodeGroup(accountId, iamRole, clusterName, nodeGroupName, oldWokerNodeGroupName, regionCode)
+    }
+    else if (actionId == 'TaintsNodeGroup')
+    {
+        def step2_values = params.Step2.tokenize(',')
+        def clusterName = "${step2_values[0]}"
+        echo "ClusterName: ${clusterName}" 
+        def nodeGroupName = "${step2_values[1]}"
+        echo "NodeGroupName: ${nodeGroupName}"
+        def regionCode = "${step2_values[2]}"
+        echo "RegionCode: ${regionCode}"
+        taintsNodeGroup(accountId, iamRole, clusterName, nodeGroupName, regionCode)
+
+    }
+    else if (actionId == 'RemoveTaintsNodeGroup')
+    {
+        def step2_values = params.Step2.tokenize(',')
+        def clusterName = "${step2_values[0]}"
+        echo "ClusterName: ${clusterName}" 
+        def nodeGroupName = "${step2_values[1]}"
+        echo "NodeGroupName: ${nodeGroupName}"
+        def regionCode = "${step2_values[2]}"
+        echo "RegionCode: ${regionCode}"
+        removeTaintsNodeGroup(accountId, iamRole, clusterName, nodeGroupName, regionCode)
+
+    }
+    else if (actionId == 'ScaleAndUpdateNodeGroup')
+    {
+        def step2_values = params.Step2.tokenize(',')
+        def clusterName = "${step2_values[0]}"
+        echo "ClusterName: ${clusterName}" 
+        def nodeGroupName = "${step2_values[1]}"
+        echo "NodeGroupName: ${nodeGroupName}"
+        def clusterVersion = "${step2_values[2]}"
+        echo "ClusterVersion: ${clusterVersion}"
+        def regionCode = "${step2_values[3]}"
+        echo "RegionCode: ${regionCode}"
+        scaleNodeGroup(accountId, iamRole, clusterName, nodeGroupName, clusterVersion, regionCode)
+
+    }
+    else if (actionId == 'UpdateEKSAddon')
+    {
+        def step2_values = params.Step2.tokenize(',')
+        def clusterName = "${step2_values[0]}"
+        def regionCode  = "${step2_values[1]}"
+        def addOns      = "${step2_values[2]}"
+        def saRoleARN   = "${step2_values[3]}"
+        updateEKSAddon(accountId, iamRole, clusterName, regionCode, addOns, saRoleARN)
+    }
+    else if (actionId == 'DeregistersTargets')
+    {
+        def step2_values    = params.Step2.tokenize(',')
+        def clusterName     = "${step2_values[0]}"
+        def regionCode      = "${step2_values[1]}"
+        def targetGroupArns = "${step2_values[2]}"
+        def healthTG        = "${step2_values[3]}"
+        def timeoutTG       = "${step2_values[4]}"
+
+        DeregistersTargets(accountId, iamRole, clusterName, regionCode, targetGroupArns, healthTG, timeoutTG)
+    }
+    else if (actionId == 'TaintNewNodeAndUntaintOldNode')
+    {
+        def step2_values = params.Step2.tokenize(',')
+        def clusterName = "${step2_values[0]}"
+        echo "ClusterName: ${clusterName}" 
+        def oldNodeGroupName = "${step2_values[1]}"
+        echo "OldNodeGroupName: ${oldNodeGroupName}"
+        def newNodeGroupName = "${step2_values[2]}"
+        echo "NewNodeGroupName: ${newNodeGroupName}"
+        def regionCode = "${step2_values[3]}"
+        echo "RegionCode: ${regionCode}"
+        taintNewNodeAndUntaintOldNode(accountId, iamRole, clusterName, oldNodeGroupName, newNodeGroupName, regionCode)
+
+    }
+    else if (actionId == 'DeleteNewWorkloadNode')
+    {
+        def step2_values = params.Step2.tokenize(',')
+        def clusterName = "${step2_values[0]}"
+        echo "ClusterName: ${clusterName}" 
+        def nodeGroupName = "${step2_values[1]}"
+        echo "NodeGroupName: ${nodeGroupName}"
+        def regionCode = "${step2_values[2]}"
+        echo "RegionCode: ${regionCode}"
+        deleteNewWorkloadNode(accountId, iamRole, clusterName, nodeGroupName, regionCode)
+
+    }
+}
+}
+}
+
+def updateEKSCluster(accountId, iamRole, clusterName, clusterVersion, regionCode){
+    withAWS(roleAccount: "${accountId}", role: "${iamRole}", useNode: true) {
+        stage('Update EKS Cluster Control Plane') {
+            sh """
+                aws eks update-cluster-version \
+                --name ${clusterName} \
+                --kubernetes-version ${clusterVersion} \
+                --region ${regionCode}
+
+                sleep 30
+
+                aws eks wait cluster-active \
+                --name  ${clusterName} \
+                --region ${regionCode}
+            """
+        }
+    }
+}
+def checkEKSCluster(accountId, iamRole, clusterName, regionCode){
+    withAWS(roleAccount: "${accountId}", role: "${iamRole}", useNode: true) {
+        stage('Check EKS Cluster') {
+            clusterVersion = sh(script: "aws eks describe-cluster --name ${clusterName} --region ${regionCode} --query cluster.version --output text", returnStdout: true).trim()
+            echo "ClusterVersion: ${clusterVersion}"
+            nodeGroups = ( sh(script: "aws eks list-nodegroups --cluster-name ${clusterName} --query nodegroups[] --region ${regionCode} --output text", returnStdout: true).trim() )
+            echo "NodeGroups: ${nodeGroups}"
+            addons = sh(script: "aws eks list-addons --cluster-name ${clusterName} --query addons[] --region ${regionCode} --output text", returnStdout: true).trim()
+            echo "Addons: ${addons}" 
+        }
+    }
+}
+def updateNodeGroup(accountId, iamRole, clusterName, nodeGroupName, clusterVersion, regionCode){
+    withAWS(roleAccount: "${accountId}", role: "${iamRole}", useNode: true) {
+    stage('Update Node Group') {
+        sh """
+            aws eks update-nodegroup-version \
+            --cluster-name ${clusterName} \
+            --nodegroup-name ${nodeGroupName} \
+            --kubernetes-version ${clusterVersion} \
+            --region ${regionCode} \
+            --force
+            
+            sleep 30
+
+            aws eks wait nodegroup-active \
+            --cluster-name ${clusterName} \
+            --nodegroup-name ${nodeGroupName} \
+            --region ${regionCode}           
+        """
+    }
+    }
+}
+def createNodeGroup(accountId, iamRole, clusterName, nodeGroupName, oldWokerNodeGroupName, regionCode){
+    withAWS(roleAccount: "${accountId}", role: "${iamRole}", useNode: true) {
+        stage('Create Workload Node Group') {
+            nodeRoleARN = sh(script: "aws eks describe-nodegroup --cluster-name ${clusterName} --nodegroup-name ${oldWokerNodeGroupName} --query 'nodegroup.nodeRole' --output text", returnStdout: true).trim()
+            echo "NodeRoleARN: ${nodeRoleARN}" 
+            minSize = sh(script: "aws eks describe-nodegroup --cluster-name ${clusterName} --nodegroup-name ${oldWokerNodeGroupName} --query 'nodegroup.scalingConfig.minSize' --output text", returnStdout: true).trim()
+            echo "MinSize: ${minSize}"
+            maxSize = sh(script: "aws eks describe-nodegroup --cluster-name ${clusterName} --nodegroup-name ${oldWokerNodeGroupName} --query 'nodegroup.scalingConfig.maxSize' --output text", returnStdout: true).trim()
+            echo "MaxSize: ${maxSize}"
+            desiredSize = sh(script: "aws eks describe-nodegroup --cluster-name ${clusterName} --nodegroup-name ${oldWokerNodeGroupName} --query 'nodegroup.scalingConfig.desiredSize' --output text", returnStdout: true).trim()
+            echo "DesiredSize: ${desiredSize}"
+            instanceType = sh(script: "aws eks describe-nodegroup --cluster-name ${clusterName} --nodegroup-name ${oldWokerNodeGroupName} --query 'nodegroup.instanceTypes' --output text", returnStdout: true).trim()
+            echo "InstanceType: ${instanceType}"
+            launchTemplate = sh(script: "aws eks describe-nodegroup --cluster-name ${clusterName} --nodegroup-name ${oldWokerNodeGroupName} --query 'nodegroup.launchTemplate.name' --output text", returnStdout: true).trim()
+            echo "LaunchTemplate: ${launchTemplate}"
+            subnetIDs = sh(script: "aws eks describe-nodegroup --cluster-name ${clusterName} --nodegroup-name ${oldWokerNodeGroupName} --query 'nodegroup.subnets' --output text", returnStdout: true).trim()
+            echo "SubnetIDs: ${subnetIDs}"
+            capacityType = sh(script: "aws eks describe-nodegroup --cluster-name ${clusterName} --nodegroup-name ${oldWokerNodeGroupName} --query 'nodegroup.capacityType' --output text", returnStdout: true).trim()
+            echo "CapacityType: ${capacityType}"
+            labels = sh(script: "aws eks describe-nodegroup --cluster-name ${clusterName} --nodegroup-name ${oldWokerNodeGroupName} --query 'nodegroup.labels' --output json | tr -d '\n'", returnStdout: true).trim()
+            echo "Labels: ${labels}"
+
+            sh """
+                if [[ "${launchTemplate}" = "None" ]]; then
+                    aws eks create-nodegroup \
+                    --cluster-name ${clusterName} \
+                    --nodegroup-name ${nodeGroupName} \
+                    --scaling-config minSize=${minSize},maxSize=${maxSize},desiredSize=${desiredSize} \
+                    --subnets ${subnetIDs}  \
+                    --instance-types ${instanceType} \
+                    --node-role ${nodeRoleARN} \
+                    --capacity-type ${capacityType} \
+                    --labels '${labels}' \
+                    --region ${regionCode}
+                else
+                    aws eks create-nodegroup \
+                    --cluster-name ${clusterName} \
+                    --nodegroup-name ${nodeGroupName} \
+                    --scaling-config minSize=${minSize},maxSize=${maxSize},desiredSize=${desiredSize} \
+                    --subnets ${subnetIDs}  \
+                    --instance-types ${instanceType} \
+                    --launch-template name=${launchTemplate},version='\$Latest' \
+                    --node-role ${nodeRoleARN} \
+                    --capacity-type ${capacityType} \
+                    --labels '${labels}' \
+                    --region ${regionCode}
+                fi
+                sleep 30
+
+                aws eks wait nodegroup-active \
+                --cluster-name ${clusterName} \
+                --nodegroup-name ${nodeGroupName} \
+                --region ${regionCode} 
+            """
+        }
+    }
+}
+def taintsNodeGroup(accountId, iamRole, clusterName, nodeGroupName, regionCode){
+    withAWS(roleAccount: "${accountId}", role: "${iamRole}", useNode: true) {
+    stage('Add Or Update Taints Node Group') {
+        sh """
+            aws eks update-nodegroup-config \
+            --cluster-name ${clusterName} \
+            --nodegroup-name ${nodeGroupName} \
+            --taints 'addOrUpdateTaints=[{key=dedicated,value=upgrade,effect=NO_SCHEDULE}]' \
+            --region ${regionCode}
+
+            sleep 30
+
+            aws eks wait nodegroup-active \
+            --cluster-name ${clusterName} \
+            --nodegroup-name ${nodeGroupName} \
+            --region ${regionCode}
+        """
+    }
+    }
+}
+def removeTaintsNodeGroup(accountId, iamRole, clusterName, nodeGroupName, regionCode){
+    withAWS(roleAccount: "${accountId}", role: "${iamRole}", useNode: true) {
+    stage('Remove Taint Node Group') {
+        sh """
+            aws eks update-nodegroup-config \
+            --cluster-name ${clusterName} \
+            --nodegroup-name ${nodeGroupName} \
+            --taints 'removeTaints=[{key=dedicated,value=upgrade,effect=NO_SCHEDULE}]' \
+            --region ${regionCode}
+
+            sleep 20
+
+            aws eks wait nodegroup-active \
+            --cluster-name ${clusterName} \
+            --nodegroup-name ${nodeGroupName} \
+            --region ${regionCode}
+        """
+    }
+    }
+}
+def taintNewNodeAndUntaintOldNode(accountId, iamRole, clusterName, oldNodeGroupName, newNodeGroupName, regionCode){
+    withAWS(roleAccount: "${accountId}", role: "${iamRole}", useNode: true) {
+    stage('Taint New Node Group And Untaint Old Node Group') {
+        sh """
+            aws eks update-nodegroup-config \
+            --cluster-name ${clusterName} \
+            --nodegroup-name ${newNodeGroupName} \
+            --taints 'addOrUpdateTaints=[{key=dedicated,value=upgrade,effect=NO_SCHEDULE}]' \
+            --region ${regionCode}
+            
+            sleep 30
+
+            aws eks wait nodegroup-active \
+            --cluster-name ${clusterName} \
+            --nodegroup-name ${newNodeGroupName} \
+            --region ${regionCode}
+
+            aws eks update-nodegroup-config \
+            --cluster-name ${clusterName} \
+            --nodegroup-name ${oldNodeGroupName} \
+            --taints 'removeTaints=[{key=dedicated,value=upgrade,effect=NO_SCHEDULE}]' \
+            --region ${regionCode}
+
+            sleep 20
+
+            aws eks wait nodegroup-active \
+            --cluster-name ${clusterName} \
+            --nodegroup-name ${oldNodeGroupName} \
+            --region ${regionCode}
+        """
+    }
+    }
+}
+def deleteNewWorkloadNode(accountId, iamRole, clusterName, nodeGroupName, regionCode){
+    withAWS(roleAccount: "${accountId}", role: "${iamRole}", useNode: true) {
+    stage('Delete New Workload Node Group') {
+        sh """
+            aws eks delete-nodegroup \
+            --cluster-name ${clusterName} \
+            --nodegroup-name ${nodeGroupName} \
+            --region ${regionCode}
+
+            sleep 30
+
+            aws eks wait nodegroup-deleted \
+            --cluster-name ${clusterName} \
+            --nodegroup-name ${nodeGroupName} \
+            --region ${regionCode}
+        """
+    }
+    }
+}
+def scaleNodeGroup(accountId, iamRole, clusterName, nodeGroupName, clusterVersion, regionCode){
+    withAWS(roleAccount: "${accountId}", role: "${iamRole}", useNode: true) {
+    stage('Scale in/out and update Node Group') {
+        minSize = sh(script: "aws eks describe-nodegroup --cluster-name ${clusterName} --nodegroup-name ${nodeGroupName} --query 'nodegroup.scalingConfig.minSize' --output text", returnStdout: true).trim()
+        echo "MinSize: ${minSize}"
+        maxSize = sh(script: "aws eks describe-nodegroup --cluster-name ${clusterName} --nodegroup-name ${nodeGroupName} --query 'nodegroup.scalingConfig.maxSize' --output text", returnStdout: true).trim()
+        echo "MaxSize: ${maxSize}"
+        desiredSize = sh(script: "aws eks describe-nodegroup --cluster-name ${clusterName} --nodegroup-name ${nodeGroupName} --query 'nodegroup.scalingConfig.desiredSize' --output text", returnStdout: true).trim()
+        echo "DesiredSize: ${desiredSize}"
+        sh """
+            aws eks update-nodegroup-config \
+            --cluster-name ${clusterName} \
+            --nodegroup-name ${nodeGroupName} \
+            --scaling-config minSize=0,maxSize=1,desiredSize=0 \
+            --region ${regionCode}
+
+            sleep 30
+
+            aws eks wait nodegroup-active \
+            --cluster-name ${clusterName} \
+            --nodegroup-name ${nodeGroupName} \
+            --region ${regionCode}
+
+            aws eks update-nodegroup-version \
+            --cluster-name ${clusterName} \
+            --nodegroup-name ${nodeGroupName} \
+            --kubernetes-version ${clusterVersion} \
+            --region ${regionCode} \
+            --force
+
+            sleep 30
+
+            aws eks wait nodegroup-active \
+            --cluster-name ${clusterName} \
+            --nodegroup-name ${nodeGroupName} \
+            --region ${regionCode}
+
+            aws eks update-nodegroup-config \
+            --cluster-name ${clusterName} \
+            --nodegroup-name ${nodeGroupName} \
+            --scaling-config minSize=${minSize},maxSize=${maxSize},desiredSize=${desiredSize} \
+            --region ${regionCode}
+
+            sleep 30
+
+            aws eks wait nodegroup-active \
+            --cluster-name ${clusterName} \
+            --nodegroup-name ${nodeGroupName} \
+            --region ${regionCode}    
+        """
+    }
+    }
+}
+
+def updateEKSAddon(accountId, iamRole, clusterName, regionCode, addOns, saRoleARN){
+    withAWS(roleAccount: "${accountId}", role: "${iamRole}", useNode: true) {
+        stage('Update Add-ons') {
+            script {
+                def num = addOns.replaceAll('\\s', ',').split(',').size()
+                env.addOns = addOns.tokenize('\n')
+                for (int i = 0; i < num; i++) {
+                    def i_alias = i
+                    sh '''
+                        i_alias='''+i_alias+'''
+                        clusterName='''+clusterName+'''
+                        regionCode='''+regionCode+'''
+                        saRoleARN='''+saRoleARN+'''
+
+                        k=$(( $i_alias + 1 ))
+                        addon=$(echo ${addOns} | tr -d "[]'" | cut -d " " -f${k})
+                        addonName=$(echo ${addon} | cut -d ":" -f1)
+                        addonVersion=$(echo ${addon} | cut -d ":" -f2)
+                
+                        if [[ "${addonName}" = "vpc-cni" ]]; then
+                        {
+                            {
+                                echo "Update EKS add-on: vpc-cni, version: $addonVersion"
+                                aws eks update-addon --cluster-name ${clusterName} --addon-name vpc-cni --addon-version ${addonVersion} --region ${regionCode} \
+                                --resolve-conflicts OVERWRITE --configuration-values '{"env":{"AWS_VPC_K8S_CNI_CUSTOM_NETWORK_CFG":"true","ENI_CONFIG_LABEL_DEF":"topology.kubernetes.io/zone"}}'
+
+                                sleep 30
+                                aws eks wait addon-active --cluster-name ${clusterName} --addon-name vpc-cni --region ${regionCode}
+                            } ||
+                            {
+                                echo "Max attempts exceeded update-addon"
+                            }
+                        }
+
+                        elif [ "${addonName}" = "aws-ebs-csi-driver" ] && [ "${saRoleARN}" != "" ]; then
+                        {
+                            {
+                                echo "Update EKS add-on: aws-ebs-csi-driver, version: $addonVersion, arn: $saRoleARN"
+                                aws eks update-addon --cluster-name ${clusterName} --addon-name aws-ebs-csi-driver --addon-version ${addonVersion} --region ${regionCode} \
+                                --service-account-role-arn ${saRoleARN} \
+                                --resolve-conflicts OVERWRITE
+
+                                sleep 30
+                                aws eks wait addon-active --cluster-name ${clusterName} --addon-name aws-ebs-csi-driver --region ${regionCode}
+                            } ||
+                            {
+                                echo "Max attempts exceeded update-addon"
+                            }
+                        }
+                        else
+                        {
+                            {
+                                echo "Update EKS add-on: $addonName, version: $addonVersion"
+                                aws eks update-addon --cluster-name ${clusterName} --addon-name ${addonName} --addon-version ${addonVersion} --resolve-conflicts OVERWRITE --region ${regionCode}
+                                sleep 30
+                                aws eks wait addon-active --cluster-name ${clusterName} --addon-name ${addonName} --region ${regionCode}
+                            } ||
+                            {
+                                echo "Max attempts exceeded update-addon"
+                            }
+                        }
+                        fi
+                    '''
+                }
+                }    
+            }
+        }
+}
+
+void defineParams() {
+  SYSTEM = [
+    web: "web",
+  ]
+}
+
+def DeregistersTargets(accountId, iamRole, clusterName, regionCode, targetGroupArns, healthTG, timeoutTG){
+    withAWS(roleAccount: "${accountId}", role: "${iamRole}", useNode: true) {
+        stage('Deregister target group IPs and Delete Pod') {
+            script {
+                env.targetGroupArnsOri  = targetGroupArns.tokenize('\n')
+
+                // Connect to EKS cluster
+                sh "aws eks --region ${regionCode} update-kubeconfig --name ${clusterName}"
+
+                def num = targetGroupArns.replaceAll('\\s', ',').split(',').size()
+
+                def detachs = [:]
+                for (int i = 0; i < num; i++) {
+                    def i_alias = i
+
+                    detachs["${i_alias}"] = {
+                        sh '''
+                        i_alias='''+i_alias+'''
+                        regionCode='''+regionCode+'''
+                        healthTG='''+healthTG+'''
+                        timeoutTG='''+timeoutTG+'''
+
+                        targetGroupArnsOri=$(echo ${targetGroupArnsOri} | tr -d "[]'")
+                        IFS='\t' read -ra targetGroupArns <<< "${targetGroupArnsOri}"
+
+                        k=$(( $i_alias + 1 ))
+                        targetGroupArn=$(echo ${targetGroupArns} | cut -d " " -f${k})
+                        
+                        targetGroupIps=$(aws elbv2 describe-target-health --region ${regionCode} --target-group-arn ${targetGroupArn} --query 'TargetHealthDescriptions[*].Target.Id' --output text)
+                        targetGroupPorts=$(aws elbv2 describe-target-health --region ${regionCode} --target-group-arn ${targetGroupArn} --query 'TargetHealthDescriptions[*].Target.Port' --output text)
+
+                        countIP=$(aws elbv2 describe-target-health --region ${regionCode} --target-group-arn ${targetGroupArn} --query 'TargetHealthDescriptions[*].Target.Id' --output text | tr '\t' '\n' | wc -l)
+                        
+                        if [[ $countIP -gt 1 ]]; then
+
+                            IFS='\t' read -ra arr_ports <<< "$targetGroupPorts"
+                            IFS='\t' read -ra arr_ips <<< "$targetGroupIps"
+
+                            for j in "${!arr_ips[@]}"; do
+                                nameSpace=$(kubectl get pod -o wide -A | grep -w ${arr_ips[$j]} | awk '{print $1}')
+                                podName=$(kubectl get pod -o wide -A | grep -w ${arr_ips[$j]} | awk '{print $2}')
+                                
+                                if [ "${nameSpace}" != "" ] && [ "${podName}" != "" ]; then
+                                    echo "Detach IP: ${arr_ips[$j]}, Port: ${arr_ports[$j]} from target group: ${targetGroupArn}"
+                                    aws elbv2 deregister-targets --target-group-arn $targetGroupArn --targets Id=${arr_ips[$j]},Port=${arr_ports[$j]}
+                                    sleep 30
+                                    {
+                                        aws elbv2 wait target-deregistered --target-group-arn $targetGroupArn --targets Id=${arr_ips[$j]},Port=${arr_ports[$j]}
+                                    } ||
+                                    {
+                                        aws elbv2 wait target-deregistered --target-group-arn $targetGroupArn --targets Id=${arr_ips[$j]},Port=${arr_ports[$j]} 
+                                    } ||
+                                    {
+                                        aws elbv2 wait target-deregistered --target-group-arn $targetGroupArn --targets Id=${arr_ips[$j]},Port=${arr_ports[$j]} 
+                                    } ||
+                                    {
+                                        echo "Max attempts exceeded wait target-deregistered after 3 tries"
+                                    }
+
+
+                                    echo "Deleting pod: ${podName} in namespace: ${nameSpace}"
+                                    {
+                                        kubectl delete pod ${podName} -n ${nameSpace}
+                                    } ||
+                                    {
+                                        echo "Error delete pod: ${podName} in namespace: ${nameSpace}"
+                                    }
+                                else
+                                    echo "Cannot deregister this target group"
+                                fi
+                                
+                                # Wait until new IP join target group and healthy, 1 out 1 in
+                                countNewIP=$(aws elbv2 describe-target-health --region ${regionCode} --target-group-arn ${targetGroupArn} --query 'TargetHealthDescriptions[*].Target.Id' --output text | tr '\t' '\n' | wc -l)
+                                until (( $countNewIP >= $countIP ))
+                                do
+                                    countNewIP=$(aws elbv2 describe-target-health --region ${regionCode} --target-group-arn ${targetGroupArn} --query 'TargetHealthDescriptions[*].Target.Id' --output text | tr '\t' '\n' | wc -l)
+                                done
+                            
+                                targetGroupNewIps=$(aws elbv2 describe-target-health --region ${regionCode} --target-group-arn ${targetGroupArn} --query 'TargetHealthDescriptions[*].Target.Id' --output text)
+                                IFS='\t' read -ra arr_newips <<< "$targetGroupNewIps"
+                                for l in "${!arr_newips[@]}"; do
+                                    if [[ "${healthTG}" = "healthy" ]]; then
+                                        {
+                                            sleep 30
+                                            aws elbv2 wait target-in-service --region ${regionCode} --target-group-arn $targetGroupArn --targets Id=${arr_newips[$l]},Port=${arr_ports[$j]}
+                                        } ||
+                                        {
+                                            echo "Max attempts exceeded elbv2 wait target-in-service"
+                                        }
+                                    elif [[ "${healthTG}" = "unhealthy" ]]; then
+                                        sleep ${timeoutTG}
+                                    fi
+                                done
+                                
+                                echo "Deregister next target IP at $(date +%H%M%S)"
+                            done
+                        else
+                            echo "Target group $targetGroupArn has 1 target, it maybe service downtime, consider to scale out it"
+                        fi
+                        '''
+                    }
+                }
+                parallel detachs
+            }    
+        }
+    }
+}
+
+
+def disableClusterAutoscaler(accountId, iamRole, clusterName, regionCode){
+    withAWS(roleAccount: "${accountId}", role: "${iamRole}", useNode: true) {
+        stage('Disable Cluster Autoscaler') {
+            script {
+                sh '''
+                regionCode='''+regionCode+'''
+                clusterName='''+clusterName+'''
+                aws eks --region ${regionCode} update-kubeconfig --name ${clusterName}
+
+                nameSpace=$(kubectl get deploy -o wide -A | grep -i autoscaler | awk '{print $1}')
+                deploymentName=$(kubectl get deploy -o wide -A | grep -i autoscaler | awk '{print $2}')
+                if [ "${nameSpace}" != "" ] && [ "${deploymentName}" != "" ]; then
+                    kubectl -n ${nameSpace} scale deploy ${deploymentName} --replicas=0
+                else
+                    echo "Cluster Autoscaler not setup"
+                fi
+                '''
+                }
+            }
+        }
+}
+
+
+def enableClusterAutoscaler(accountId, iamRole, clusterName, regionCode){
+    withAWS(roleAccount: "${accountId}", role: "${iamRole}", useNode: true) {
+        stage('Enable Cluster Autoscaler') {
+            script {
+                sh '''
+                regionCode='''+regionCode+'''
+                clusterName='''+clusterName+'''
+                aws eks --region ${regionCode} update-kubeconfig --name ${clusterName}
+
+                nameSpace=$(kubectl get deploy -o wide -A | grep -i autoscaler | awk '{print $1}')
+                deploymentName=$(kubectl get deploy -o wide -A | grep -i autoscaler | awk '{print $2}')
+                if [ "${nameSpace}" != "" ] && [ "${deploymentName}" != "" ]; then
+                    kubectl -n ${nameSpace} scale deploy ${deploymentName} --replicas=1
+                else
+                    echo "Cluster Autoscaler not setup"
+                fi
+                '''
+                }
+            }
+        }
+}
