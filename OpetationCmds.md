@@ -1,3 +1,5 @@
+https://docs.google.com/spreadsheets/d/1wkkiliG7RsLDm7N1bZrzVlZCVif-JZN2gVC9gaIOcec/edit?usp=drivesdk
+
 ```
 Đầy ổ đĩa do 1 tiến trình hold quá nhiều file đã xóa
 Check lsof +L1 --> restart tiến trình
